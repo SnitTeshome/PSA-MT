@@ -1,0 +1,10 @@
+# Pinned to majors, not exact versions: transformers v5 changed enough APIs that
+# an unpinned "transformers" is a real risk on this checkpoint set.
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+pydantic>=2.7,<3.0
+transformers>=4.44,<6.0
+sentencepiece>=0.2.0
+protobuf>=4.25
+accelerate>=0.33
+huggingface_hub>=0.24

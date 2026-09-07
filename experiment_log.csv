@@ -1,0 +1,10 @@
+run_id,architecture,stage,peft_method,status,init_from,train_data,n_train,n_val,epochs,learning_rate,batch_size,lora_r,lora_alpha,replay_fraction,start_timestamp,end_timestamp,train_time_min,total_params,trainable_params,trainable_pct,val_chrf2pp_best_epoch,val_epoch_at_best,notes_and_anomalies
+nllb_zeroshot,nllb,zeroshot,,planned,base checkpoint (no training),,,,,,,,,,,,,,,,,,
+nllb_stage1_lora_only,nllb,stage1,layer-freeze (no LoRA),planned,base checkpoint,"general Ekegusii (Non-PSA rows: scripture + storybook + dictionary/lughayangu)",,,5.0,5e-05,32.0,,,,,,,,,,,,"use_lora=False -> peft_setup.freeze_encoder_layers fallback, not LoRA with embedding frozen - see 02_nllb_training.ipynb's markdown for this cell"
+nllb_stage1_lora_emb,nllb,stage1,lora+embeddings,planned,base checkpoint,"general Ekegusii (Non-PSA rows: scripture + storybook + dictionary/lughayangu)",,,5.0,5e-05,32.0,16.0,32.0,,,,,,,,,,
+nllb_stage2_lora_only,nllb,stage2,layer-freeze (no LoRA),planned,nllb_stage1_lora_emb merged output,PSA (x4 upsampled) + 25% stage1 replay,,,5.0,5e-05,32.0,,,0.25,,,,,,,,,
+nllb_stage2_lora_emb,nllb,stage2,lora+embeddings,planned,nllb_stage1_lora_emb merged output,PSA (x4 upsampled) + 25% stage1 replay,,,5.0,5e-05,32.0,16.0,32.0,0.25,,,,,,,,,
+nllb_mixed_lora_only,nllb,mixed,layer-freeze (no LoRA),planned,base checkpoint,"general + PSA (x4 upsampled) combined, one pass",,,5.0,5e-05,32.0,,,,,,,,,,,,
+nllb_mixed_lora_emb,nllb,mixed,lora+embeddings,planned,base checkpoint,"general + PSA (x4 upsampled) combined, one pass",,,5.0,5e-05,32.0,16.0,32.0,,,,,,,,,,
+nllb_psaonly_lora_only,nllb,psa_only,layer-freeze (no LoRA),planned,base checkpoint,"PSA only (x4 upsampled), no general data, no replay",,,5.0,5e-05,32.0,,,,,,,,,,,,
+nllb_psaonly_lora_emb,nllb,psa_only,lora+embeddings,planned,base checkpoint,"PSA only (x4 upsampled), no general data, no replay",,,5.0,5e-05,32.0,16.0,32.0,,,,,,,,,,

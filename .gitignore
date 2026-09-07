@@ -1,0 +1,41 @@
+# Model weights and training artifacts - these are multi-GB and belong on
+# Hugging Face Hub (see 07_publish_to_hub.ipynb), not in git. checkpoints/
+# and deployment/ don't exist in this local copy, but they will on the node.
+checkpoints/
+deployment/
+mlflow.db
+mlruns/
+
+# Large, regenerable derived data (00_data_prep.ipynb rebuilds all of this
+# from raw_data/ in a few minutes, no GPU needed) - data/mixed.jsonl alone is
+# 108MB, over GitHub's 100MB hard per-file limit, so this isn't optional for
+# that one file. The small, final evaluation splits are NOT excluded below.
+data/mixed.jsonl
+data/stage1.jsonl
+data/stage2.jsonl
+data/train.jsonl
+data/train.csv
+data/whole_dataset.csv
+data/whole_dataset.parquet
+data/mixture.json
+
+# Raw source corpora (57MB) - host on a Hugging Face dataset repo instead
+# (same pattern already used for model weights) and download before running
+# 00_data_prep.ipynb; not duplicated here.
+raw_data/
+
+# Local serving artifacts (per-run, not project state)
+serve/feedback.jsonl
+serve/.cloudflared
+serve/api.log
+serve/tunnel.log
+serve/PUBLIC_URL.txt
+serve/_mock_dev_server.py
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Env files with real tokens - .env.example stays, .env never does
+.env
