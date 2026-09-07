@@ -83,9 +83,13 @@ holds several related checkpoints, not one model per repo):
 - `<hf-username>/nllb-ekegusii-ablation` — subfolder `nllb_mixed_lora_only`
   (this system's Ekegusii model) plus the other 7 ablation configs and the
   mT5 comparison run, kept for the companion study's reproducibility.
-- `<hf-username>/nllb-other-languages-psa` — subfolder
-  `nllb_combined_other_langs` (this system's Kiswahili/Somali/Dholuo model)
-  plus the three independent per-language models kept for comparison.
+- `<hf-username>/nllb-kiswahili-somali-luo` — subfolder `nllb_combined_other_langs`
+  (this system's Kiswahili/Somali/Dholuo model, what `serve/` actually uses) plus
+  the three independent per-language models kept for comparison, plus
+  `nllb_combined_other_langs_v2` (the gentler-recipe retrain from
+  `06_nllb_other_languages_v2.ipynb` - an in-progress improvement attempt, not
+  yet wired into `serve/` in place of the original - see that notebook's
+  section above for its current, not fully resolved status).
 
 *(Replace `<hf-username>` with the actual namespace once pushed.)*
 
