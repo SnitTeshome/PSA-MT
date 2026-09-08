@@ -86,10 +86,12 @@ holds several related checkpoints, not one model per repo):
 - `<hf-username>/nllb-kiswahili-somali-luo` — subfolder `nllb_combined_other_langs`
   (this system's Kiswahili/Somali/Dholuo model, what `serve/` actually uses) plus
   the three independent per-language models kept for comparison, plus
-  `nllb_combined_other_langs_v2` (the gentler-recipe retrain from
-  `06_nllb_other_languages_v2.ipynb` - an in-progress improvement attempt, not
-  yet wired into `serve/` in place of the original - see that notebook's
-  section above for its current, not fully resolved status).
+  `nllb_combined_other_langs_v2` and `nllb_combined_other_langs_v3` (two
+  successive gentler-recipe retrains from `06_nllb_other_languages_v2.ipynb`/
+  `_v3.ipynb` - `v3` eliminated the Somali/Dholuo regression but only reaches
+  zero-shot parity, not a clear improvement, so neither is yet wired into
+  `serve/` in place of the original - see those notebooks' sections below for
+  what each actually found).
 
 *(Replace `<hf-username>` with the actual namespace once pushed.)*
 
@@ -157,8 +159,10 @@ Final_Training/
    winner) - both sets of checkpoints are saved either way. Produces
    `nllb_combined_other_langs`, this system's other-languages model.
 
-   `06_nllb_other_languages_v2.ipynb` is a follow-up retrain of the combined model only -
-   see its own section below for why, and its current (not yet fully resolved) status.
+   `06_nllb_other_languages_v2.ipynb` and `_v3.ipynb` are two successive follow-up
+   retrains of the combined model only - see their own sections below for why, and what
+   each found. `v3` is the current state of that line of work: regression eliminated,
+   but only to zero-shot parity, not a clear improvement.
 7. `07_publish_to_hub.ipynb` -> pushes deployment-ready checkpoints to the Hub
 8. `serve/` -> the translation UI, backed by the two checkpoints above
 
@@ -381,6 +385,33 @@ signal, and the true per-language trajectory earlier than the first checkpoint i
 known. **This is not yet a fully resolved result** - the next planned fix is splitting a
 low-leakage monitoring subset out of `shared_test` itself for the stopping decision,
 rather than relying on `shared_val`.
+
+## `06_nllb_other_languages_v3.ipynb`
+
+A second combined-only retrain, fixing what `v2` didn't: `v2`'s early-stopping decision
+relied on `shared_val`, which turned out to be ~86.5% contaminated with near-duplicates
+of the training pool (see `v2`'s section above), so the "best step" it picked was itself
+chosen on a partly-misleading signal. This notebook (with `train_other_langs_v3.py`,
+again a separate training entry point) fixes that at the source: it splits a 150-row,
+domain-stratified **monitoring** subset directly out of `shared_test` itself - disjoint
+from the 835-row **final** subset used for reporting, and confirmed independently to have
+only ~5% near-duplicate overlap with training, the same clean standard `shared_test` was
+always held to - and uses only that monitoring subset for the per-language early-stopping
+decision.
+
+Result: the regression is gone - Somali finished at zero-shot parity (chrF2++ +0.00),
+Dholuo improved slightly (+0.09), Kiswahili improved slightly (+0.07) - but `v2`'s real
+Kiswahili gain (+1.48) didn't survive the cleaner signal either. Reading the full
+per-step trace (not just the final numbers) showed why: Somali and Dholuo chrF2++
+declined smoothly and monotonically from the very first checkpoint (step 100) onward -
+not noise, but genuine, fast catastrophic forgetting of NLLB's existing pretrained
+capability under narrow PSA-only fine-tuning. **This is a resolved measurement, not yet
+a resolved outcome** - the regression bug is fixed, but the model still only reaches
+zero-shot parity, not a real improvement. The leading candidate for an actual
+improvement is self-distillation replay (using the zero-shot checkpoint to generate
+pseudo-parallel Somali/Dholuo/Kiswahili text from the general-domain English corpora
+`raw_data/` already has for Ekegusii, since no real non-PSA parallel data exists for
+these three languages) - proposed, not yet built.
 
 ## `07_publish_to_hub.ipynb`
 
