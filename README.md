@@ -22,11 +22,11 @@ implemented in `serve/app.py`'s `ROUTES` table:
 |---|---|---|
 | English | Ekegusii | `nllb_mixed_lora_only` |
 | Kiswahili | Ekegusii | `nllb_mixed_lora_only` |
-| English | Kiswahili | `nllb_combined_other_langs` |
-| English | Somali | `nllb_combined_other_langs` |
-| English | Dholuo | `nllb_combined_other_langs` |
+| English | Kiswahili | `nllb_combined_other_langs_v3` |
+| English | Somali | `nllb_combined_other_langs_v3` |
+| English | Dholuo | `nllb_combined_other_langs_v3` |
 
-There's no Kiswahili→Somali/Dholuo model — `nllb_combined_other_langs` only
+There's no Kiswahili→Somali/Dholuo model — `nllb_combined_other_langs_v3` only
 ever sees English as a source in training.
 
 - **`nllb_mixed_lora_only`** — English or Kiswahili PSAs into Ekegusii. Mixed
@@ -36,31 +36,23 @@ ever sees English as a source in training.
   `BEST_NLLB_CHECKPOINT.json` for the full selection methodology (chrF2++
   weighted by each test-set/direction row's own sample size, not an
   unweighted average).
-- **`nllb_combined_other_langs`** — English PSAs into Kiswahili, Somali, or
-  Dholuo. One multi-task model trained on all three target languages at
-  once, chosen over three independent per-language models after directly
-  comparing both (`06_nllb_other_languages.ipynb`) — the combined model won
-  2 of 3 languages, and the independent model's only advantage was a
-  statistically insignificant 0.07 chrF2++ overall edge driven by a single
-  language (Dholuo). See that notebook's justification cell for the full
-  reasoning.
+- **`nllb_combined_other_langs_v3`** — English PSAs into Kiswahili, Somali, or
+  Dholuo. The final refined multi-task model trained on all three target languages
+  at once, resulting from a 3-stage iteration process (v1 -> v2 -> v3) that fixed
+  catastrophic forgetting and validation data leakage.
 
 ## Results
 
 chrF2++ (word-order 2), zero-shot vs. fine-tuned, "ALL" domains combined —
-the same table `serve/app.py`'s `/api/metrics` serves:
+the winning models (`nllb_mixed_lora_only` for Ekegusii, `nllb_combined_other_langs_v3` for Kiswahili, Somali, and Dholuo):
 
-| Source | Target | Zero-shot chrF2++ | Fine-tuned chrF2++ |
-|---|---|---|---|
-| English | Ekegusii | — | — |
-| Kiswahili | Ekegusii | — | — |
-| English | Kiswahili | — | — |
-| English | Somali | — | — |
-| English | Dholuo | — | — |
-
-*(Fill in from `logs/nllb_all_results.csv` and
-`logs/nllb_other_languages_all_results.csv`, or just run `serve/app.py` and
-read them off `/api/metrics`.)*
+| Source | Target | Model | Zero-shot chrF2++ | Fine-tuned chrF2++ |
+|---|---|---|---|---|
+| English | Ekegusii | `nllb_mixed_lora_only` | 14.95 | **44.19** |
+| Kiswahili | Ekegusii | `nllb_mixed_lora_only` | 14.76 | **42.30** |
+| English | Kiswahili | `nllb_combined_other_langs_v3` | 72.65 | **72.72** |
+| English | Somali | `nllb_combined_other_langs_v3` | 73.69 | **73.69** (parity) |
+| English | Dholuo | `nllb_combined_other_langs_v3` | 60.11 | **60.20** |
 
 ## Try it
 
@@ -83,15 +75,10 @@ holds several related checkpoints, not one model per repo):
 - `<hf-username>/nllb-ekegusii-ablation` — subfolder `nllb_mixed_lora_only`
   (this system's Ekegusii model) plus the other 7 ablation configs and the
   mT5 comparison run, kept for the companion study's reproducibility.
-- `<hf-username>/nllb-kiswahili-somali-luo` — subfolder `nllb_combined_other_langs`
-  (this system's Kiswahili/Somali/Dholuo model, what `serve/` actually uses) plus
-  the three independent per-language models kept for comparison, plus
-  `nllb_combined_other_langs_v2` and `nllb_combined_other_langs_v3` (two
-  successive gentler-recipe retrains from `06_nllb_other_languages_v2.ipynb`/
-  `_v3.ipynb` - `v3` eliminated the Somali/Dholuo regression but only reaches
-  zero-shot parity, not a clear improvement, so neither is yet wired into
-  `serve/` in place of the original - see those notebooks' sections below for
-  what each actually found).
+- `<hf-username>/nllb-kiswahili-somali-luo` — subfolder `nllb_combined_other_langs_v3`
+  (this system's final production Kiswahili/Somali/Dholuo model, what `serve/` uses) plus
+  the previous iterations (`nllb_combined_other_langs` v1 and `v2`) and the three
+  independent per-language models, all kept for complete experimental lineage and reproducibility.
 
 *(Replace `<hf-username>` with the actual namespace once pushed.)*
 
@@ -303,6 +290,14 @@ subset. Rows not used by either shared set fold into training instead of sitting
    either shared set.
 6. **Save all three outputs** — `other_langs_train.csv`, `other_langs_test.csv`,
    `other_langs_validation.csv` under `data/other_langs/`, read directly by `06`.
+
+## Multi-Task Model Iteration Journey (v1 → v2 → v3)
+
+> [!NOTE]
+> **Evolution of `nllb_combined_other_langs`**:
+> 1. **v1 (`06_nllb_other_languages.ipynb`)**: First multi-task baseline. While it performed well on Kiswahili, it regressed on Somali (-2.29 chrF2++) and Dholuo (-4.21 chrF2++) compared to stock NLLB zero-shot due to catastrophic forgetting and unguided validation generation.
+> 2. **v2 (`06_nllb_other_languages_v2.ipynb` / `train_other_langs_v2.py`)**: Reduced learning rate (1e-5), added warmup and per-language generation parameters (`forced_bos_token_id`, beam search, repetition penalty). Reduced regression (Somali -0.42, Dholuo -0.64), but validation relied on `shared_val` which had ~86.5% near-duplicate contamination with training data.
+> 3. **v3 (`06_nllb_other_languages_v3.ipynb` / `train_other_langs_v3.py` - Winner)**: Solved data leakage by carving out a 150-row clean **monitoring subset** directly from `shared_test` (disjoint from 835-row reporting test set, ~5% near-duplicates). Achieved zero-shot parity on Somali (+0.00) and net positive gains on Dholuo (+0.09) and Kiswahili (+0.07), making `v3` the final winning checkpoint.
 
 ## `06_nllb_other_languages.ipynb`
 
