@@ -457,7 +457,6 @@ checkpoints handles a given pair, matching the table at the top of this file exa
   every notebook.
 - MLflow tracking is forced to a sqlite file under this project root
   (`_ensure_isolated_mlflow_tracking()` in `train.py`), so this project's runs can never
-  land in the same store as any other project's on this node, regardless of environment
-  variables.
+  land in the same store as any other project's on this node, irrespective of environment variables
 - Every experiment name is prefixed `final-training-*` (`EXPERIMENT_PREFIX`), never the
   bare `psa-translation-*` names an earlier, separate project used.
